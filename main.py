@@ -50,16 +50,19 @@ X_MONTO1_PT = X_MONTO1_RIGHT_PT - W_MONTO1_PT
 X_MONTO2_PT = X_MONTO2_RIGHT_PT - W_MONTO2_PT
 X_MONTO3_PT = X_MONTO3_RIGHT_PT - W_MONTO3_PT
 
-# Posiciones verticales ajustadas al PDF PRUEBA 1
+# Posiciones verticales ajustadas
 Y_START_MM = 50.47
 Y_END_MM = 260.00
 
 Y_START_PT = Y_START_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
-# Interlineado real observado en PRUEBA 1
-LINE_H_MM = 4.13
+# Interlineado compacto para parecerse más al PDF PRUEBA 1
+LINE_H_MM = 3.85
 LINE_H_PT = LINE_H_MM * MM_TO_PT
+
+# Alto visual de celda separado del avance vertical
+CELL_H_PT = 10.00
 
 
 # =========================================================
@@ -124,13 +127,6 @@ def read_excel_file(uploaded_file):
 
 
 def parse_excel(df):
-    """
-    Espera archivo con 6 columnas:
-    DIA, MES, XXXX, MONTO 1, MONTO 2, MONTO 3
-
-    Se usa header=None para respetar el archivo como matriz directa.
-    """
-
     if df.shape[1] < 6:
         raise ValueError(
             "El archivo debe tener al menos 6 columnas: DIA, MES, XXXX, MONTO 1, MONTO 2 y MONTO 3."
@@ -157,7 +153,7 @@ def parse_excel(df):
         ""
     )
 
-    # Elimina filas completamente vacías
+    # Eliminar filas completamente vacías
     df = df[
         ~(
             (df["DIA"] == "") &
@@ -256,28 +252,28 @@ class EstadoCuentaPDF(FPDF):
 
         # Día
         self.set_xy(X_DIA_PT, y)
-        self.cell(W_DIA_PT, LINE_H_PT, dia_str, border=0, align="L")
+        self.cell(W_DIA_PT, CELL_H_PT, dia_str, border=0, align="L")
 
         # Mes
         self.set_xy(X_MES_PT, y)
-        self.cell(W_MES_PT, LINE_H_PT, mes_str, border=0, align="L")
+        self.cell(W_MES_PT, CELL_H_PT, mes_str, border=0, align="L")
 
         # Texto / XXXX
         for i, line in enumerate(texto_lines):
             self.set_xy(X_TEXTO_PT, y + (i * LINE_H_PT))
-            self.cell(W_TEXTO_PT, LINE_H_PT, line, border=0, align="L")
+            self.cell(W_TEXTO_PT, CELL_H_PT, line, border=0, align="L")
 
         # Monto 1
         self.set_xy(X_MONTO1_PT, y)
-        self.cell(W_MONTO1_PT, LINE_H_PT, monto1_str, border=0, align="R")
+        self.cell(W_MONTO1_PT, CELL_H_PT, monto1_str, border=0, align="R")
 
         # Monto 2
         self.set_xy(X_MONTO2_PT, y)
-        self.cell(W_MONTO2_PT, LINE_H_PT, monto2_str, border=0, align="R")
+        self.cell(W_MONTO2_PT, CELL_H_PT, monto2_str, border=0, align="R")
 
         # Monto 3
         self.set_xy(X_MONTO3_PT, y)
-        self.cell(W_MONTO3_PT, LINE_H_PT, monto3_str, border=0, align="R")
+        self.cell(W_MONTO3_PT, CELL_H_PT, monto3_str, border=0, align="R")
 
         self.current_y += row_height
 
