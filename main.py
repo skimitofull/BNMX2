@@ -16,8 +16,9 @@ PAGE_H_MM = 279.40
 PAGE_W_PT = PAGE_W_MM * MM_TO_PT
 PAGE_H_PT = PAGE_H_MM * MM_TO_PT
 
+# Fuente ajustada al PDF muestra
 FONT_NAME = "Helvetica"
-FONT_SIZE = 9
+FONT_SIZE = 8.35
 
 # Posiciones horizontales
 X_DIA_MM = 8.78
@@ -50,19 +51,19 @@ X_MONTO1_PT = X_MONTO1_RIGHT_PT - W_MONTO1_PT
 X_MONTO2_PT = X_MONTO2_RIGHT_PT - W_MONTO2_PT
 X_MONTO3_PT = X_MONTO3_RIGHT_PT - W_MONTO3_PT
 
-# Posiciones verticales ajustadas
+# Posiciones verticales
 Y_START_MM = 50.47
 Y_END_MM = 260.00
 
 Y_START_PT = Y_START_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
-# Interlineado compacto para parecerse más al PDF PRUEBA 1
-LINE_H_MM = 2.55
+# Interlineado ajustado al PDF muestra
+LINE_H_MM = 3.62
 LINE_H_PT = LINE_H_MM * MM_TO_PT
 
-# Alto visual de celda separado del avance vertical
-CELL_H_PT = 10.00
+# Alto visual de celda ajustado
+CELL_H_PT = 8.20
 
 
 # =========================================================
@@ -82,6 +83,27 @@ def clean_cell(val):
         return ""
 
     return sval
+
+
+def clean_day(val):
+    if val is None:
+        return ""
+
+    if isinstance(val, float) and np.isnan(val):
+        return ""
+
+    try:
+        f = float(val)
+        if np.isnan(f):
+            return ""
+        return str(int(f))
+    except Exception:
+        return clean_cell(val)
+
+
+def clean_month(val):
+    txt = clean_cell(val).upper().strip()
+    return txt[:3]
 
 
 def monto_cell(val):
@@ -111,7 +133,7 @@ def monto_cell(val):
         return f"{fval:,.2f}"
 
     except Exception:
-        return ""
+        return clean_cell(val)
 
 
 def read_excel_file(uploaded_file):
@@ -232,8 +254,8 @@ class EstadoCuentaPDF(FPDF):
             self.current_y = Y_START_PT
 
     def add_movement_row(self, dia, mes, texto, monto1, monto2, monto3):
-        dia_str = clean_cell(dia)
-        mes_str = clean_cell(mes)
+        dia_str = clean_day(dia)
+        mes_str = clean_month(mes)
         texto_str = clean_cell(texto)
 
         monto1_str = monto_cell(monto1)
