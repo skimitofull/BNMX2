@@ -57,7 +57,7 @@ W_TEXTO_PT = X_MONTO1_PT - X_TEXTO_PT - 4
 # =========================================================
 
 # Página 1: inicio especial según HOJA 1.pdf
-Y_START_FIRST_MM = 78.85
+Y_START_FIRST_MM = 132.05
 
 # Página 2 en adelante: diseño anterior
 Y_START_NORMAL_MM = 50.47
