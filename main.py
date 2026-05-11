@@ -17,7 +17,7 @@ PAGE_W_PT = PAGE_W_MM * MM_TO_PT
 PAGE_H_PT = PAGE_H_MM * MM_TO_PT
 
 FONT_NAME = "Helvetica"
-FONT_SIZE = 8.35
+FONT_SIZE = 9
 
 # =========================================================
 # POSICIONES HORIZONTALES
