@@ -39,10 +39,6 @@ X_MONTO1_RIGHT_PT = X_MONTO1_RIGHT_MM * MM_TO_PT
 X_MONTO2_RIGHT_PT = X_MONTO2_RIGHT_MM * MM_TO_PT
 X_MONTO3_RIGHT_PT = X_MONTO3_RIGHT_MM * MM_TO_PT
 
-# =========================================================
-# ANCHOS
-# =========================================================
-
 W_DIA_PT = 12
 W_MES_PT = 28
 
@@ -54,25 +50,32 @@ X_MONTO1_PT = X_MONTO1_RIGHT_PT - W_MONTO1_PT
 X_MONTO2_PT = X_MONTO2_RIGHT_PT - W_MONTO2_PT
 X_MONTO3_PT = X_MONTO3_RIGHT_PT - W_MONTO3_PT
 
-# El texto puede ocupar desde X_TEXTO hasta antes de MONTO 1
-# Ya no se usa para partir texto; solo como caja de escritura.
 W_TEXTO_PT = X_MONTO1_PT - X_TEXTO_PT - 4
 
 # =========================================================
 # POSICIONES VERTICALES
 # =========================================================
 
-Y_START_MM = 50.47
+# Página 1: inicio especial según HOJA 1.pdf
+Y_START_FIRST_MM = 78.85
+
+# Página 2 en adelante: diseño anterior
+Y_START_NORMAL_MM = 50.47
+
 Y_END_MM = 260.00
 
-Y_START_PT = Y_START_MM * MM_TO_PT
+Y_START_FIRST_PT = Y_START_FIRST_MM * MM_TO_PT
+Y_START_NORMAL_PT = Y_START_NORMAL_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
-# Espacio correcto entre líneas
-LINE_H_MM = 4.1240
+# Interlineado confirmado
+LINE_H_MM = 4.13
 LINE_H_PT = LINE_H_MM * MM_TO_PT
 
 CELL_H_PT = 8.20
+
+# Máximo de filas en la primera página
+MAX_ROWS_FIRST_PAGE = 30
 
 # =========================================================
 # FUNCIONES AUXILIARES
@@ -90,10 +93,8 @@ def clean_cell(val):
     if sval.lower() in ["nan", "none", "null"]:
         return ""
 
-    # Evita saltos internos accidentales dentro de una celda
     sval = sval.replace("\r", " ").replace("\n", " ")
 
-    # Compacta espacios dobles
     while "  " in sval:
         sval = sval.replace("  ", " ")
 
@@ -202,7 +203,6 @@ def parse_excel(df):
         ""
     )
 
-    # Eliminar filas completamente vacías
     df = df[
         ~(
             (df["DIA"] == "") &
@@ -227,6 +227,7 @@ def get_pdf_bytes(pdf):
 
     return bytes(pdf_output)
 
+
 # =========================================================
 # CLASE PDF
 # =========================================================
@@ -241,19 +242,36 @@ class EstadoCuentaPDF(FPDF):
 
         self.set_auto_page_break(False)
         self.alias_nb_pages()
-        self.current_y = Y_START_PT
+
+        self.current_y = Y_START_FIRST_PT
+        self.rows_on_current_page = 0
 
     def header(self):
         self.set_font(FONT_NAME, "", FONT_SIZE)
-        self.current_y = Y_START_PT
+
+        if self.page_no() == 1:
+            self.current_y = Y_START_FIRST_PT
+        else:
+            self.current_y = Y_START_NORMAL_PT
+
+        self.rows_on_current_page = 0
 
     def footer(self):
         pass
 
     def check_page_break(self):
+        # Primera página: máximo 30 filas
+        if self.page_no() == 1 and self.rows_on_current_page >= MAX_ROWS_FIRST_PAGE:
+            self.add_page()
+            self.current_y = Y_START_NORMAL_PT
+            self.rows_on_current_page = 0
+            return
+
+        # Páginas siguientes: salto por margen inferior normal
         if self.current_y + LINE_H_PT > Y_END_PT:
             self.add_page()
-            self.current_y = Y_START_PT
+            self.current_y = Y_START_NORMAL_PT
+            self.rows_on_current_page = 0
 
     def add_movement_row(self, dia, mes, texto, monto1, monto2, monto3):
         dia_str = clean_day(dia)
@@ -291,10 +309,7 @@ class EstadoCuentaPDF(FPDF):
             align="L"
         )
 
-        # TEXTO / XXXX
-        # IMPORTANTE:
-        # Ya NO se divide automáticamente.
-        # Lo que venga en la celda se imprime en una sola línea.
+        # TEXTO
         self.set_xy(X_TEXTO_PT, y)
         self.cell(
             W_TEXTO_PT,
@@ -335,6 +350,8 @@ class EstadoCuentaPDF(FPDF):
         )
 
         self.current_y += LINE_H_PT
+        self.rows_on_current_page += 1
+
 
 # =========================================================
 # STREAMLIT
