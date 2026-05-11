@@ -18,7 +18,7 @@ PAGE_H_PT = PAGE_H_MM * MM_TO_PT
 
 # Fuente ajustada al PDF muestra
 FONT_NAME = "Helvetica"
-FONT_SIZE = 8.35
+FONT_SIZE = 9
 
 # Posiciones horizontales
 X_DIA_MM = 8.78
@@ -59,7 +59,7 @@ Y_START_PT = Y_START_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
 # Interlineado ajustado al PDF muestra
-LINE_H_MM = 3.62
+LINE_H_MM = 3.65
 LINE_H_PT = LINE_H_MM * MM_TO_PT
 
 # Alto visual de celda ajustado
