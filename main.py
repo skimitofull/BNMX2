@@ -58,7 +58,7 @@ Y_START_PT = Y_START_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
 # Interlineado compacto para parecerse más al PDF PRUEBA 1
-LINE_H_MM = 3.98
+LINE_H_MM = 2.55
 LINE_H_PT = LINE_H_MM * MM_TO_PT
 
 # Alto visual de celda separado del avance vertical
