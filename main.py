@@ -69,7 +69,7 @@ Y_START_PT = Y_START_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
 # Espacio correcto entre líneas
-LINE_H_MM = 4.13
+LINE_H_MM = 4.1250
 LINE_H_PT = LINE_H_MM * MM_TO_PT
 
 CELL_H_PT = 8.20
