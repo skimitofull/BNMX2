@@ -19,12 +19,10 @@ PAGE_H_PT = PAGE_H_MM * MM_TO_PT
 FONT_NAME = "Helvetica"
 FONT_SIZE = 9
 
-# Posiciones horizontales
 X_DIA_MM = 8.78
 X_MES_MM = 14.71
 X_TEXTO_MM = 28.79
 
-# Cantidades alineadas por borde derecho
 X_MONTO1_RIGHT_MM = 139.78
 X_MONTO2_RIGHT_MM = 169.31
 X_MONTO3_RIGHT_MM = 199.97
@@ -93,10 +91,7 @@ def monto_cell(val):
 
         fval = float(val)
 
-        if np.isnan(fval):
-            return ""
-
-        if fval == 0:
+        if np.isnan(fval) or fval == 0:
             return ""
 
         return f"{fval:,.2f}"
@@ -106,12 +101,6 @@ def monto_cell(val):
 
 
 def read_excel_file(uploaded_file):
-    """
-    Lee archivos .xlsx, .xlsm y .xls.
-    - .xlsx / .xlsm: openpyxl
-    - .xls: xlrd
-    """
-
     filename = uploaded_file.name.lower()
 
     if filename.endswith(".xls"):
@@ -124,11 +113,6 @@ def read_excel_file(uploaded_file):
 
 
 def parse_excel(df):
-    """
-    Espera archivo con 6 columnas:
-    DIA, MES, XXXX, MONTO 1, MONTO 2, MONTO 3
-    """
-
     if df.shape[1] < 6:
         raise ValueError("El archivo debe tener al menos 6 columnas: DIA, MES, XXXX, MONTO 1, MONTO 2 y MONTO 3.")
 
@@ -143,9 +127,7 @@ def parse_excel(df):
         "MONTO 3"
     ]
 
-    df = df.fillna("")
-
-    return df
+    return df.fillna("")
 
 
 def split_text(pdf, text, max_width):
@@ -174,6 +156,15 @@ def split_text(pdf, text, max_width):
         lines.append(current_line)
 
     return lines if lines else [""]
+
+
+def get_pdf_bytes(pdf):
+    pdf_output = pdf.output(dest="S")
+
+    if isinstance(pdf_output, str):
+        return pdf_output.encode("latin1")
+
+    return bytes(pdf_output)
 
 
 # =========================================================
@@ -219,28 +210,22 @@ class EstadoCuentaPDF(FPDF):
         self.set_font(FONT_NAME, "", FONT_SIZE)
         self.set_text_color(0, 0, 0)
 
-        # Día
         self.set_xy(X_DIA_PT, y)
         self.cell(W_DIA_PT, LINE_H_PT, dia_str, border=0, align="L")
 
-        # Mes
         self.set_xy(X_MES_PT, y)
         self.cell(W_MES_PT, LINE_H_PT, mes_str, border=0, align="L")
 
-        # Texto
         for i, line in enumerate(texto_lines):
             self.set_xy(X_TEXTO_PT, y + (i * LINE_H_PT))
             self.cell(W_TEXTO_PT, LINE_H_PT, line, border=0, align="L")
 
-        # Monto 1
         self.set_xy(X_MONTO1_PT, y)
         self.cell(W_MONTO1_PT, LINE_H_PT, monto1_str, border=0, align="R")
 
-        # Monto 2
         self.set_xy(X_MONTO2_PT, y)
         self.cell(W_MONTO2_PT, LINE_H_PT, monto2_str, border=0, align="R")
 
-        # Monto 3
         self.set_xy(X_MONTO3_PT, y)
         self.cell(W_MONTO3_PT, LINE_H_PT, monto3_str, border=0, align="R")
 
@@ -293,7 +278,7 @@ if excel_file:
                         row["MONTO 3"]
                     )
 
-                pdf_bytes = pdf.output(dest="S").encode("latin1")
+                pdf_bytes = get_pdf_bytes(pdf)
 
                 st.success("PDF generado correctamente.")
 
