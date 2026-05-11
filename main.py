@@ -3,7 +3,6 @@ import pandas as pd
 from fpdf import FPDF
 from datetime import datetime
 import numpy as np
-import io
 
 # =========================================================
 # CONFIGURACIÓN GENERAL
@@ -11,23 +10,21 @@ import io
 
 MM_TO_PT = 2.83465
 
-# Hoja carta vertical
 PAGE_W_MM = 215.90
 PAGE_H_MM = 279.40
 
 PAGE_W_PT = PAGE_W_MM * MM_TO_PT
 PAGE_H_PT = PAGE_H_MM * MM_TO_PT
 
-# Fuente
 FONT_NAME = "Helvetica"
 FONT_SIZE = 9
 
-# Posiciones horizontales medidas desde el PDF nuevo
+# Posiciones horizontales
 X_DIA_MM = 8.78
 X_MES_MM = 14.71
 X_TEXTO_MM = 28.79
 
-# Cantidades alineadas por su borde derecho
+# Cantidades alineadas por borde derecho
 X_MONTO1_RIGHT_MM = 139.78
 X_MONTO2_RIGHT_MM = 169.31
 X_MONTO3_RIGHT_MM = 199.97
@@ -40,7 +37,6 @@ X_MONTO1_RIGHT_PT = X_MONTO1_RIGHT_MM * MM_TO_PT
 X_MONTO2_RIGHT_PT = X_MONTO2_RIGHT_MM * MM_TO_PT
 X_MONTO3_RIGHT_PT = X_MONTO3_RIGHT_MM * MM_TO_PT
 
-# Anchos de columnas para alinear importes
 W_DIA_PT = 12
 W_MES_PT = 28
 W_TEXTO_PT = 92
@@ -53,14 +49,12 @@ X_MONTO1_PT = X_MONTO1_RIGHT_PT - W_MONTO1_PT
 X_MONTO2_PT = X_MONTO2_RIGHT_PT - W_MONTO2_PT
 X_MONTO3_PT = X_MONTO3_RIGHT_PT - W_MONTO3_PT
 
-# Posiciones verticales
 Y_START_MM = 50.83
 Y_END_MM = 260.00
 
 Y_START_PT = Y_START_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
-# Altura de línea
 LINE_H_MM = 4.13
 LINE_H_PT = LINE_H_MM * MM_TO_PT
 
@@ -74,17 +68,22 @@ def clean_cell(val):
         return ""
     if isinstance(val, float) and np.isnan(val):
         return ""
+
     sval = str(val).strip()
+
     if sval.lower() in ["nan", "none", "null"]:
         return ""
+
     return sval
 
 
 def monto_cell(val):
     if val is None:
         return ""
+
     if isinstance(val, float) and np.isnan(val):
         return ""
+
     if isinstance(val, str) and val.strip().lower() in ["nan", "none", "null", ""]:
         return ""
 
@@ -101,8 +100,27 @@ def monto_cell(val):
             return ""
 
         return f"{fval:,.2f}"
+
     except Exception:
         return ""
+
+
+def read_excel_file(uploaded_file):
+    """
+    Lee archivos .xlsx, .xlsm y .xls.
+    - .xlsx / .xlsm: openpyxl
+    - .xls: xlrd
+    """
+
+    filename = uploaded_file.name.lower()
+
+    if filename.endswith(".xls"):
+        return pd.read_excel(uploaded_file, engine="xlrd")
+
+    if filename.endswith(".xlsx") or filename.endswith(".xlsm"):
+        return pd.read_excel(uploaded_file, engine="openpyxl")
+
+    raise ValueError("Formato de archivo no compatible.")
 
 
 def parse_excel(df):
@@ -110,6 +128,9 @@ def parse_excel(df):
     Espera archivo con 6 columnas:
     DIA, MES, XXXX, MONTO 1, MONTO 2, MONTO 3
     """
+
+    if df.shape[1] < 6:
+        raise ValueError("El archivo debe tener al menos 6 columnas: DIA, MES, XXXX, MONTO 1, MONTO 2 y MONTO 3.")
 
     df = df.iloc[:, :6].copy()
 
@@ -122,7 +143,9 @@ def parse_excel(df):
         "MONTO 3"
     ]
 
-    return df.fillna("")
+    df = df.fillna("")
+
+    return df
 
 
 def split_text(pdf, text, max_width):
@@ -167,9 +190,6 @@ class EstadoCuentaPDF(FPDF):
 
     def header(self):
         self.set_font(FONT_NAME, "", FONT_SIZE)
-
-        # En este diseño no se dibuja encabezado nuevo.
-        # Solo se inicia el área de movimientos.
         self.current_y = Y_START_PT
 
     def footer(self):
@@ -207,18 +227,20 @@ class EstadoCuentaPDF(FPDF):
         self.set_xy(X_MES_PT, y)
         self.cell(W_MES_PT, LINE_H_PT, mes_str, border=0, align="L")
 
-        # Texto / XXXX
+        # Texto
         for i, line in enumerate(texto_lines):
             self.set_xy(X_TEXTO_PT, y + (i * LINE_H_PT))
             self.cell(W_TEXTO_PT, LINE_H_PT, line, border=0, align="L")
 
-        # Montos: se imprimen en la primera línea del movimiento
+        # Monto 1
         self.set_xy(X_MONTO1_PT, y)
         self.cell(W_MONTO1_PT, LINE_H_PT, monto1_str, border=0, align="R")
 
+        # Monto 2
         self.set_xy(X_MONTO2_PT, y)
         self.cell(W_MONTO2_PT, LINE_H_PT, monto2_str, border=0, align="R")
 
+        # Monto 3
         self.set_xy(X_MONTO3_PT, y)
         self.cell(W_MONTO3_PT, LINE_H_PT, monto3_str, border=0, align="R")
 
@@ -236,16 +258,21 @@ st.set_page_config(
 )
 
 st.title("📄 Generador de Estado de Cuenta - Nuevo Diseño")
-st.markdown("Carga un Excel con columnas: **DIA, MES, XXXX, MONTO 1, MONTO 2, MONTO 3**.")
+
+st.markdown("""
+Carga un archivo Excel con estas columnas:
+
+**DIA | MES | XXXX | MONTO 1 | MONTO 2 | MONTO 3**
+""")
 
 excel_file = st.file_uploader(
     "Sube tu archivo Excel",
-    type=["xlsx", "xls"]
+    type=["xlsx", "xls", "xlsm"]
 )
 
 if excel_file:
     try:
-        df_raw = pd.read_excel(excel_file)
+        df_raw = read_excel_file(excel_file)
         df = parse_excel(df_raw)
 
         st.success(f"Archivo cargado correctamente: {len(df)} filas.")
