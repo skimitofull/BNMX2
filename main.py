@@ -59,7 +59,7 @@ Y_START_PT = Y_START_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
 # Interlineado ajustado al PDF muestra
-LINE_H_MM = 3.70
+LINE_H_MM = 3.75
 LINE_H_PT = LINE_H_MM * MM_TO_PT
 
 # Alto visual de celda ajustado
