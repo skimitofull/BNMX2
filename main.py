@@ -19,10 +19,12 @@ PAGE_H_PT = PAGE_H_MM * MM_TO_PT
 FONT_NAME = "Helvetica"
 FONT_SIZE = 9
 
+# Posiciones horizontales
 X_DIA_MM = 8.78
 X_MES_MM = 14.71
 X_TEXTO_MM = 28.79
 
+# Cantidades alineadas por borde derecho
 X_MONTO1_RIGHT_MM = 139.78
 X_MONTO2_RIGHT_MM = 169.31
 X_MONTO3_RIGHT_MM = 199.97
@@ -35,6 +37,7 @@ X_MONTO1_RIGHT_PT = X_MONTO1_RIGHT_MM * MM_TO_PT
 X_MONTO2_RIGHT_PT = X_MONTO2_RIGHT_MM * MM_TO_PT
 X_MONTO3_RIGHT_PT = X_MONTO3_RIGHT_MM * MM_TO_PT
 
+# Anchos de escritura
 W_DIA_PT = 12
 W_MES_PT = 28
 W_TEXTO_PT = 92
@@ -47,12 +50,14 @@ X_MONTO1_PT = X_MONTO1_RIGHT_PT - W_MONTO1_PT
 X_MONTO2_PT = X_MONTO2_RIGHT_PT - W_MONTO2_PT
 X_MONTO3_PT = X_MONTO3_RIGHT_PT - W_MONTO3_PT
 
-Y_START_MM = 50.83
+# Posiciones verticales ajustadas al PDF PRUEBA 1
+Y_START_MM = 50.47
 Y_END_MM = 260.00
 
 Y_START_PT = Y_START_MM * MM_TO_PT
 Y_END_PT = Y_END_MM * MM_TO_PT
 
+# Interlineado real observado en PRUEBA 1
 LINE_H_MM = 4.13
 LINE_H_PT = LINE_H_MM * MM_TO_PT
 
@@ -64,6 +69,7 @@ LINE_H_PT = LINE_H_MM * MM_TO_PT
 def clean_cell(val):
     if val is None:
         return ""
+
     if isinstance(val, float) and np.isnan(val):
         return ""
 
@@ -87,7 +93,12 @@ def monto_cell(val):
 
     try:
         if isinstance(val, str):
-            val = val.replace(",", "").replace("$", "").strip()
+            val = (
+                val.replace(",", "")
+                   .replace("$", "")
+                   .replace(" ", "")
+                   .strip()
+            )
 
         fval = float(val)
 
@@ -104,17 +115,26 @@ def read_excel_file(uploaded_file):
     filename = uploaded_file.name.lower()
 
     if filename.endswith(".xls"):
-        return pd.read_excel(uploaded_file, engine="xlrd")
+        return pd.read_excel(uploaded_file, engine="xlrd", header=None)
 
     if filename.endswith(".xlsx") or filename.endswith(".xlsm"):
-        return pd.read_excel(uploaded_file, engine="openpyxl")
+        return pd.read_excel(uploaded_file, engine="openpyxl", header=None)
 
     raise ValueError("Formato de archivo no compatible.")
 
 
 def parse_excel(df):
+    """
+    Espera archivo con 6 columnas:
+    DIA, MES, XXXX, MONTO 1, MONTO 2, MONTO 3
+
+    Se usa header=None para respetar el archivo como matriz directa.
+    """
+
     if df.shape[1] < 6:
-        raise ValueError("El archivo debe tener al menos 6 columnas: DIA, MES, XXXX, MONTO 1, MONTO 2 y MONTO 3.")
+        raise ValueError(
+            "El archivo debe tener al menos 6 columnas: DIA, MES, XXXX, MONTO 1, MONTO 2 y MONTO 3."
+        )
 
     df = df.iloc[:, :6].copy()
 
@@ -127,7 +147,31 @@ def parse_excel(df):
         "MONTO 3"
     ]
 
-    return df.fillna("")
+    df = df.fillna("")
+
+    for col in df.columns:
+        df[col] = df[col].astype(str).str.strip()
+
+    df = df.replace(
+        ["nan", "None", "NaN", "NULL", "null"],
+        ""
+    )
+
+    # Elimina filas completamente vacías
+    df = df[
+        ~(
+            (df["DIA"] == "") &
+            (df["MES"] == "") &
+            (df["XXXX"] == "") &
+            (df["MONTO 1"] == "") &
+            (df["MONTO 2"] == "") &
+            (df["MONTO 3"] == "")
+        )
+    ].copy()
+
+    df = df.reset_index(drop=True)
+
+    return df
 
 
 def split_text(pdf, text, max_width):
@@ -210,22 +254,28 @@ class EstadoCuentaPDF(FPDF):
         self.set_font(FONT_NAME, "", FONT_SIZE)
         self.set_text_color(0, 0, 0)
 
+        # Día
         self.set_xy(X_DIA_PT, y)
         self.cell(W_DIA_PT, LINE_H_PT, dia_str, border=0, align="L")
 
+        # Mes
         self.set_xy(X_MES_PT, y)
         self.cell(W_MES_PT, LINE_H_PT, mes_str, border=0, align="L")
 
+        # Texto / XXXX
         for i, line in enumerate(texto_lines):
             self.set_xy(X_TEXTO_PT, y + (i * LINE_H_PT))
             self.cell(W_TEXTO_PT, LINE_H_PT, line, border=0, align="L")
 
+        # Monto 1
         self.set_xy(X_MONTO1_PT, y)
         self.cell(W_MONTO1_PT, LINE_H_PT, monto1_str, border=0, align="R")
 
+        # Monto 2
         self.set_xy(X_MONTO2_PT, y)
         self.cell(W_MONTO2_PT, LINE_H_PT, monto2_str, border=0, align="R")
 
+        # Monto 3
         self.set_xy(X_MONTO3_PT, y)
         self.cell(W_MONTO3_PT, LINE_H_PT, monto3_str, border=0, align="R")
 
@@ -245,7 +295,7 @@ st.set_page_config(
 st.title("📄 Generador de Estado de Cuenta - Nuevo Diseño")
 
 st.markdown("""
-Carga un archivo Excel con estas columnas:
+Carga un archivo Excel con estas columnas en este orden:
 
 **DIA | MES | XXXX | MONTO 1 | MONTO 2 | MONTO 3**
 """)
@@ -260,8 +310,8 @@ if excel_file:
         df_raw = read_excel_file(excel_file)
         df = parse_excel(df_raw)
 
-        st.success(f"Archivo cargado correctamente: {len(df)} filas.")
-        st.dataframe(df.head(20), use_container_width=True)
+        st.success(f"Archivo cargado correctamente: {len(df)} filas útiles.")
+        st.dataframe(df.head(30), use_container_width=True)
 
         if st.button("Generar PDF", type="primary", use_container_width=True):
             try:
